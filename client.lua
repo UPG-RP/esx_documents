@@ -1,5 +1,6 @@
 RegisterNetEvent("esx:playerLoaded", function(data)
     ESX.PlayerData = data
+    GetAllUserForms()
 end)
 
 local UserDocuments = {}
