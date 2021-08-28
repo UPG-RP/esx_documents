@@ -13,8 +13,8 @@ files {
 shared_scripts {
 	"@es_extended/imports.lua",
 	"@es_extended/locale.lua",
-	"locales/**.lua",
 	"config.lua",
+	"locales/**.lua",
 }
 
 server_scripts {
@@ -23,7 +23,6 @@ server_scripts {
 }
 
 client_scripts {
-	"GUI.lua",
 	"client.lua",
 }
 

@@ -2,211 +2,241 @@ RegisterNetEvent("esx:playerLoaded", function(data)
     ESX.PlayerData = data
 end)
 
-local UI_MOUSE_FOCUS = false
-local USER_DOCUMENTS = {}
-local fontId
-local CURRENT_DOCUMENT = nil
-local DOCUMENT_FORMS = nil
-
-local MENU_OPTIONS = {
-    x = 0.5,
-    y = 0.2,
-    width = 0.5,
-    height = 0.04,
-    scale = 0.4,
-    font = fontId,
-    --menu_title = "Document Actions",
-    menu_subtitle = _U('document_options'),
-    color_r = 0,
-    color_g = 128,
-    color_b = 255,
-}
-
+local UserDocuments = {}
+local CurrentDocument = nil
+local AllDocuments = nil
+local Open = false
 
 Citizen.CreateThread(function()
-    DOCUMENT_FORMS = Config.Documents[Config.Locale]
-    --print(dump(DOCUMENT_FORMS))
-
-    if Config.UseCustomFonts == true then
-        RegisterFontFile(Config.CustomFontFile)
-        fontId = RegisterFontId(Config.CustomFontId)
-        MENU_OPTIONS.font = fontId
-    else
-        MENU_OPTIONS.font = 4
-    end
-
+    AllDocuments = Config.Documents[Config.Locale]
 
     GetAllUserForms()
     SetNuiFocus(false, false)
-
 end)
-
-Citizen.CreateThread(function()
-
-end)
-
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(0)
-
-        if UI_MOUSE_FOCUS == true then
-
-            --[[
-            if IsControlJustReleased(0, 142) then -- MeleeAttackAlternate
-                --SendNUIMessage({type = "click"})
-
-            end
-            --]]
-        end
-
-        if IsControlJustReleased(0, Config.MenuKey) and GetLastInputMethod(2) then
-            Menu.hidden = false
-            OpenMainMenu()
-
-            --[[
-            SetNuiFocus(true, true)
-			SendNUIMessage({
-        		type = "ShowDocument",
-        		enable = true
-   			})
-            UI_MOUSE_FOCUS = true
-            --]]
-
-    	end
-
-        Menu.renderGUI(MENU_OPTIONS)
-    end
- end)
 
 function OpenMainMenu()
-    ClearMenu()
-    Menu.addButton(_U('public_documents'), "OpenNewPublicFormMenu", nil)
-    Menu.addButton(_U('job_documents'), "OpenNewJobFormMenu", nil)
-    Menu.addButton(_U('saved_documents'), "OpenMyDocumentsMenu", nil)
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
-    Menu.hidden = false
+    local elements = {
+        {label = _U('public_documents'), value = "public"},
+        {label = _U('saved_documents'), value = "saved"},
+    }
+
+    if AllDocuments[ESX.PlayerData.job.name] then
+        table.insert(elements, 2, {label = _U('job_documents'), value = "job"})
+    end
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "main_menu", {
+        title = _U("menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        if data.current.value == "public" then
+            OpenNewPublicFormMenu()
+        elseif data.current.value == "job" then
+            OpenNewJobFormMenu()
+        elseif data.current.value == "saved" then
+            OpenMyDocumentsMenu()
+        end
+    end, function(date, menu)
+        menu.close()
+        Open = false
+    end)
 end
 
 function CopyFormToPlayer(aPlayer)
-    --TriggerServerEvent('esx_documents:CopyToPlayer', GetPlayerServerId(player), aDocument)
-    TriggerServerEvent('esx_documents:CopyToPlayer', aPlayer, CURRENT_DOCUMENT)
-    CURRENT_DOCUMENT = nil;
-    CloseMenu()
+    TriggerServerEvent('esx_documents:CopyToPlayer', aPlayer, CurrentDocument)
+    CurrentDocument = nil;
 end
 
 function ShowToNearestPlayers(aDocument)
-    ClearMenu()
-    local players_clean = GetNeareastPlayers()
-    CURRENT_DOCUMENT = aDocument
-    if #players_clean > 0 then
-        for i=1, #players_clean, 1 do
-            --local tmpObject = { pId = players_clean[i].playerId, pForm = aDocument }
-            Menu.addButton(players_clean[i].playerName .. "[" .. tostring(players_clean[i].playerId) .. "]", "ShowDocument", players_clean[i].playerId)
-        end
-    else
-
-        Menu.addButton(_U('no_player_found'), "CloseMenu", nil)
+    local players = GetNearestPlayers()
+    CurrentDocument = aDocument
+    if #players <= 0 then
+        TriggerEvent("noticeme:Error", {
+            text = _U('no_player_found')
+        })
+        return
     end
 
-    --Menu.addButton("Go Back", "OpenFormPropertiesMenu", aDocument)
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
+    local elements = {}
+
+    for i=1, #players, 1 do
+        local player = players[i]
+        table.insert(elements, {
+            label = player.playerName,
+            playerId = player.playerId
+        })
+    end
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "nearest_menu", {
+        title = _U("nearest_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        ShowDocument(data.current.playerId)
+    end, function(date, menu)
+        menu.close()
+    end)
 end
 
 function CopyToNearestPlayers(aDocument)
-    ClearMenu()
-    local players_clean = GetNeareastPlayers()
-    CURRENT_DOCUMENT = aDocument
-    if #players_clean > 0 then
-        for i=1, #players_clean, 1 do
-
-            Menu.addButton(players_clean[i].playerName .. "[" .. tostring(players_clean[i].playerId) .. "]", "CopyFormToPlayer", players_clean[i].playerId)
-        end
-    else
-
-        Menu.addButton(_U('no_player_found'), "CloseMenu", nil)
+    local players = GetNearestPlayers()
+    CurrentDocument = aDocument
+    if #players <= 0 then
+        TriggerEvent("noticeme:Error", {
+            text = _U('no_player_found')
+        })
+        return
     end
 
-    Menu.addButton(_U('go_back'), "OpenFormPropertiesMenu", aDocument)
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
+    local elements = {}
+
+    for i=1, #players, 1 do
+        local player = players[i]
+        table.insert(elements, {
+            label = player.playerName,
+            playerId = player.playerId
+        })
+    end
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "nearest_menu", {
+        title = _U("nearest_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        CopyFormToPlayer(data.current.playerId)
+    end, function(date, menu)
+        menu.close()
+    end)
 end
 
 function OpenNewPublicFormMenu()
-    ClearMenu()
-    for i=1, #DOCUMENT_FORMS["public"], 1 do
-        Menu.addButton(DOCUMENT_FORMS["public"][i].headerTitle, "CreateNewForm", DOCUMENT_FORMS["public"][i])
+    local elements = {}
+    for i=1, #AllDocuments["public"], 1 do
+        local document = AllDocuments["public"][i]
+        table.insert(elements, {label = document.headerTitle, data = document})
     end
-    Menu.addButton(_U('close_bt'),"CloseMenu",nil)
-    Menu.hidden = false
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "public_menu", {
+        title = _U("public_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        CreateNewForm(data.current.data)
+    end, function(date, menu)
+        OpenMainMenu()
+    end)
 end
 
 function OpenNewJobFormMenu()
-    ClearMenu()
-    PlayerData = ESX.GetPlayerData()
-    if DOCUMENT_FORMS[PlayerData.job.name] ~= nil then
-
-        for i=1, #DOCUMENT_FORMS[PlayerData.job.name], 1 do
-            Menu.addButton(DOCUMENT_FORMS[PlayerData.job.name][i].headerTitle, "CreateNewForm", DOCUMENT_FORMS[PlayerData.job.name][i])
-        end
+    local elements = {}
+    for i=1, #AllDocuments[ESX.PlayerData.job.name], 1 do
+        local document = AllDocuments[ESX.PlayerData.job.name][i]
+        table.insert(elements, {label = document.headerTitle, data = document})
     end
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
-    Menu.hidden = false
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "job_menu", {
+        title = _U("job_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        CreateNewForm(data.current.data)
+    end, function(date, menu)
+        OpenMainMenu()
+    end)
 end
 
 function OpenMyDocumentsMenu()
-    ClearMenu()
-    for i=#USER_DOCUMENTS, 1, -1 do
+    local elements = {}
+    for i=#UserDocuments, 1, -1 do
+        local document = UserDocuments[i]
 
-        local date_created = ""
-        if USER_DOCUMENTS[i].data.headerDateCreated ~= nil then
-            date_created = USER_DOCUMENTS[i].data.headerDateCreated .. " - "
-        end
-
-        Menu.addButton(date_created .. USER_DOCUMENTS[i].data.headerTitle, "OpenFormPropertiesMenu", USER_DOCUMENTS[i])
+        table.insert(elements, {
+            label = document.data.headerDateCreated .. " - " .. document.data.headerTitle,
+            data = document
+        })
     end
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
-    Menu.hidden = false
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "saved_menu", {
+        title = _U("saved_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        OpenFormPropertiesMenu(data.current.data)
+    end, function(date, menu)
+        OpenMainMenu()
+    end)
 end
 
 function OpenFormPropertiesMenu(aDocument)
-    ClearMenu()
-    Menu.addButton(_U('view_bt'), "ViewDocument", aDocument.data)
-    Menu.addButton(_U('show_bt'), "ShowToNearestPlayers", aDocument.data)
-    Menu.addButton(_U('give_copy'), "CopyToNearestPlayers", aDocument.data)
-    Menu.addButton(_U('delete_bt'), "OpenDeleteFormMenu", aDocument)
-    Menu.addButton(_U('go_back'), "OpenMyDocumentsMenu", nil)
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
-    Menu.hidden = false
+    local elements = {
+        {label = _U('view_bt'), type = "view", data = aDocument.data},
+        {label = _U('show_bt'), type = "show", data = aDocument.data},
+        {label = _U('give_copy'), type = "copy", data = aDocument.data},
+        {label = _U('delete_bt'), type = "delete", data = aDocument.data},
+    }
+
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "form_menu", {
+        title = _U("form_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        if data.current.type == "view" then
+            ViewDocument(data.current.data)
+        elseif data.current.type == "show" then
+            ShowToNearestPlayers(data.current.data)
+        elseif data.current.type == "copy" then
+            CopyToNearestPlayers(data.current.data)
+        elseif data.current.type == "delete" then
+            DeleteDocument(data.current.data)
+        end
+    end, function(date, menu)
+        OpenMyDocumentsMenu()
+    end)
 end
 
 function OpenDeleteFormMenu(aDocument)
-    ClearMenu()
-    Menu.addButton(_U('yes_delete'), "DeleteDocument", aDocument)
-    Menu.addButton(_U('go_back'), "OpenFormPropertiesMenu", aDocument)
-    Menu.addButton(_U('close_bt'), "CloseMenu", nil)
-    Menu.hidden = false
-end
+    local elements = {
+        {label = _U('yes'), value = "yes", data = aDocument},
+        {label = _U('no'), value = "no", data = aDocument},
+    }
 
-function CloseMenu()
-    ClearMenu()
-    Menu.hidden = true
+    ESX.UI.Menu.CloseAll()
+    ESX.UI.Menu.Open("default", GetCurrentResourceName(), "delete_menu", {
+        title = _U("delete_menu_title"),
+        align = "top-left",
+        elements = elements
+    }, function(data, menu)
+        if data.current.value == "yes" then
+            DeleteDocument(data.current.data)
+        elseif data.current.value == "no" then
+            OpenFormPropertiesMenu(data.current.data)
+        end
+    end, function(date, menu)
+        menu.close()
+    end)
 end
-
 
 function DeleteDocument(aDocument)
-
     local key_to_remove = nil
 
     ESX.TriggerServerCallback('esx_documents:deleteDocument', function (cb)
         if cb == true then
             --remove form_close
-            for i=1, #USER_DOCUMENTS, 1 do
-                if USER_DOCUMENTS[i].id == aDocument.id then
+            for i=1, #UserDocuments, 1 do
+                if UserDocuments[i].id == aDocument.id then
                     key_to_remove = i
                 end
             end
 
             if key_to_remove ~= nil then
-                table.remove(USER_DOCUMENTS, key_to_remove)
+                table.remove(UserDocuments, key_to_remove)
             end
             OpenMyDocumentsMenu()
         end
@@ -214,17 +244,14 @@ function DeleteDocument(aDocument)
 end
 
 function CreateNewForm(aDocument)
-
-    PlayerData = ESX.GetPlayerData()
-    ESX.TriggerServerCallback('esx_documents:getPlayerDetails', function (cb_player_details)
-        if cb_player_details ~= nil then
-            --print("Received dump : " .. dump(cb_player_details))
+    ESX.TriggerServerCallback('esx_documents:getPlayerDetails', function (player)
+        if player ~= nil then
             SetNuiFocus(true, true)
-            aDocument.headerFirstName = cb_player_details.firstname
-            aDocument.headerLastName = cb_player_details.lastname
-            aDocument.headerDateOfBirth = cb_player_details.dateofbirth
-            aDocument.headerJobLabel = PlayerData.job.label
-            aDocument.headerJobGrade = PlayerData.job.grade_label
+            aDocument.headerFirstName = player.firstname
+            aDocument.headerLastName = player.lastname
+            aDocument.headerDateOfBirth = player.dateofbirth
+            aDocument.headerJobLabel = ESX.PlayerData.job.label
+            aDocument.headerJobGrade = ESX.PlayerData.job.grade_label
             aDocument.locale = Config.Locale
 
             SendNUIMessage({
@@ -234,20 +261,16 @@ function CreateNewForm(aDocument)
         else
             print ("Received nil from newely created scale object.")
         end
-    end, data)
-
+    end)
 end
 
 function ShowDocument(aPlayer)
-     --   print("ssss: " .. dump(aPlayer))
-        TriggerServerEvent('esx_documents:ShowToPlayer', aPlayer, CURRENT_DOCUMENT)
-        CURRENT_DOCUMENT = nil
-        CloseMenu()
+    TriggerServerEvent('esx_documents:ShowToPlayer', aPlayer, CurrentDocument)
+    CurrentDocument = nil
 end
 
 RegisterNetEvent('esx_documents:viewDocument')
 AddEventHandler('esx_documents:viewDocument', function( data )
-
     ViewDocument(data)
 end)
 
@@ -261,40 +284,31 @@ end
 
 RegisterNetEvent('esx_documents:copyForm')
 AddEventHandler('esx_documents:copyForm', function( data )
-       --  print("dump: " .. dump(data))
-
-    table.insert(USER_DOCUMENTS, data)
+    table.insert(UserDocuments, data)
 end)
 
 function CopyForm(aDocument)
-    --table.insert(USER_DOCUMENTS, aDocument)
 end
 
 function GetAllUserForms()
-
     ESX.TriggerServerCallback('esx_documents:getPlayerDocuments', function (cb_forms)
         if cb_forms ~= nil then
-         --   print("Received dump : " .. dump(cb_forms))
-            USER_DOCUMENTS = cb_forms
+            UserDocuments = cb_forms
         else
             print ("Received nil from newely created scale object.")
         end
-    end, data)
+    end)
 
 end
-
 
 RegisterNUICallback('form_close', function()
     SetNuiFocus(false, false)
 end)
 
 RegisterNUICallback('form_submit', function(data, cb)
-   -- print("received: " .. dump(data))
-    CloseMenu()
     ESX.TriggerServerCallback('esx_documents:submitDocument', function (cb_form)
         if cb_form ~= nil then
-            --print("Received dump : " .. dump(cb_form))
-            table.insert(USER_DOCUMENTS, cb_form)
+            table.insert(UserDocuments, cb_form)
             OpenFormPropertiesMenu(cb_form)
         else
             print ("Received nil from newely created scale object.")
@@ -302,11 +316,9 @@ RegisterNUICallback('form_submit', function(data, cb)
     end, data)
 
     SetNuiFocus(false, false)
-
 end)
 
-
-function GetNeareastPlayers()
+function GetNearestPlayers()
     local playerPed = PlayerPedId()
     local players, nearbyPlayer = ESX.Game.GetPlayersInArea(GetEntityCoords(playerPed), 3.0)
 
@@ -322,16 +334,21 @@ function GetNeareastPlayers()
     return players_clean
 end
 
+RegisterCommand("+showDocuments", function()
+    if Open then
+        ESX.UI.Menu.Close("default", GetCurrentResourceName(), "main_menu")
+        ESX.UI.Menu.Close("default", GetCurrentResourceName(), "public_menu")
+        ESX.UI.Menu.Close("default", GetCurrentResourceName(), "job_menu")
+        ESX.UI.Menu.Close("default", GetCurrentResourceName(), "saved_menu")
+        ESX.UI.Menu.Close("default", GetCurrentResourceName(), "nearest_menu")
+        Open = false
+    else
+        OpenMainMenu()
+        Open = true
+    end
+end)
 
-function dump(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dump(v) .. ','
-      end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
-end
+RegisterCommand("-showDocuments", function()
+end)
+
+RegisterKeyMapping("+showDocuments", "Show legal documents", "keyboard", "K")

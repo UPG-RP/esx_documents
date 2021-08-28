@@ -1,4 +1,11 @@
 Locales['en'] = {
+    ["menu_title"] = "Legal Documents",
+    ["public_menu_title"] = "Public Legal Documents",
+    ["job_menu_title"] = "Job Legal Documents",
+    ["saved_menu_title"] = "My Legal Documents",
+    ["form_menu_title"] = "Form Actions",
+    ["delete_menu_title"] = "Are you sure?",
+    ["nearest_menu_title"] = "Select a player",
     ['document_deleted'] = "Document was ~g~deleted~w~.",
     ['document_delete_failed'] = "Document delete ~r~failed~w~.",
     ['copy_from_player'] = "You ~g~received~w~ a form copy from a player.",
@@ -16,6 +23,8 @@ Locales['en'] = {
     ['give_copy'] = "Give Copy",
     ['delete_bt'] = "Delete",
     ['yes_delete'] = "Yes Delete",
+    ["yes"] = "Yes",
+    ["no"] = "No",
 }
 
 Config.Documents['en'] = {

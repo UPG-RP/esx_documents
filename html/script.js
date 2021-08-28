@@ -1,4 +1,3 @@
-
 var toggleShow = false;
 var activeform = {};
 var id_count = 0;
@@ -85,14 +84,12 @@ function Form (_title, _subtitle, _elements, _submittable)
 		let can_submit = true;
 
 		for (let i=0; i<activeform.elements.length; i++)
-		{	
-			
+		{
 			let _element = activeform.elements[i];
 			if (!_element.can_be_empty && ( $("#" + _element.elementid).val() == "" || $("#" + _element.elementid).val() == " "))
 			{
 				can_submit = false;
 				$("#" + _element.elementid).addClass("must_fill");
-				//console.log("Element: " + _element)
 			}
 			
 
@@ -102,7 +99,7 @@ function Form (_title, _subtitle, _elements, _submittable)
 		var json_string = JSON.stringify(activeform);
 		
 		if (can_submit) {
-			$.post('http://esx_documents/form_submit', json_string);
+			$.post('https://esx_documents/form_submit', json_string);
 			activeform.close();
 		}
 		
@@ -198,7 +195,7 @@ function Form (_title, _subtitle, _elements, _submittable)
 	this.close = function() {
 		$("#main_container").html("");
 		$("#main_container").css({display: 'none'});
-		$.post('http://esx_documents/form_close', JSON.stringify({}));
+		$.post('https://esx_documents/form_close', JSON.stringify({}));
 	}
 }
 
@@ -224,7 +221,6 @@ window.addEventListener('message', function(event){
    		$.getScript("language_" + edata.data.locale + ".js", function(data, textStatus){
    			try {
         		activeform.print();
-        		console.log("we loaded" + "language_" + edata.data.locale + ".js");
         		$("#main_container").css({
    					display: 'block'
    				});
@@ -244,7 +240,6 @@ window.addEventListener('message', function(event){
    		$.getScript("language_" + edata.data.locale + ".js", function(data, textStatus){
    			try {
         		activeform.print();
-        		console.log("we loaded" + "language_" + edata.data.locale + ".js");
         		$("#main_container").css({
    					display: 'block'
    				});
