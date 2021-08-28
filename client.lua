@@ -1,5 +1,7 @@
-ESX = nil
-local PlayerData                = {}
+RegisterNetEvent("esx:playerLoaded", function(data)
+    ESX.PlayerData = data
+end)
+
 local UI_MOUSE_FOCUS = false
 local USER_DOCUMENTS = {}
 local fontId
@@ -22,16 +24,6 @@ local MENU_OPTIONS = {
 
 
 Citizen.CreateThread(function()
-	while ESX == nil do
-		TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-		Citizen.Wait(0)
-	end
-    while ESX.IsPlayerLoaded == false do
-        Citizen.Wait(10)
-    end
-
-    PlayerData = ESX.GetPlayerData()
-
     DOCUMENT_FORMS = Config.Documents[Config.Locale]
     --print(dump(DOCUMENT_FORMS))
 

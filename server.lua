@@ -1,11 +1,3 @@
-ESX = nil
-
-
-TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-
-
-
-
 ESX.RegisterServerCallback('esx_documents:submitDocument', function(source, cb, data)
 
     local xPlayer = ESX.GetPlayerFromId(source)
