@@ -9,11 +9,13 @@ ____
 
 </div>
 
+## About this fork
+This fork of ESX_Documents aims to refactor and redesign the whole project and make the code readable and functional.
 
 ## Introduction
 Introducing Documents, a great roleplaying addition script for fivem servers using the esx framework. <b>This script provides creation, signing, copying and displaying of documents to enrich players' roleplaying experience</b>. Basically you have two type of documents:
 * Public documents
-
+  
   * Affirmation form
   * Witness testimony
   * Vehicle convey statement
@@ -57,13 +59,11 @@ Make sure your resource folder name is esx_documents. Anything else will make th
 ### Using Git
 ```
 cd resources
-git clone https://github.com/apoiat/ESX_Documents [esx]/esx_documents
+git clone https://github.com/UPG-RP/esx_documents [esx]/esx_documents
 ```
 
 ### Manually
-Download https://github.com/apoiat/ESX_Documents/archive/master.zip
-
-Rename folder to esx_documents
+Download https://github.com/UPG-RP/esx_documents/archive/master.zip
 
 Put it in the `[esx]` directory
 
